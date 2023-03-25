@@ -25,7 +25,8 @@ typedef struct {
   // input parameters
   int32_t input_buffer_size;
   int32_t output_buffer_size;
-  int32_t use_high_memory;
+  int16_t use_high_memory;
+  int16_t half_size;
 
   // BMP encoder
   BMP_ENCODE_HANDLE* bmp;
@@ -37,9 +38,9 @@ typedef struct {
   uint8_t* line_data;
 
   // actual screen size
-  int32_t actual_width;
-  int32_t actual_height;
-  int32_t pitch;
+//  int32_t actual_width;
+//  int32_t actual_height;
+//  int32_t pitch;
 
   // current decode state
   int32_t current_x;
@@ -62,7 +63,7 @@ typedef struct {
 } PNG_DECODE_HANDLE;
 
 // prototype declarations
-void png_decode_init(PNG_DECODE_HANDLE* png);
+void png_decode_init(PNG_DECODE_HANDLE* png, int16_t half_size);
 void png_decode_set_bmp_encoder(PNG_DECODE_HANDLE* png, BMP_ENCODE_HANDLE* bmp);
 void png_decode_set_header(PNG_DECODE_HANDLE* png, PNG_HEADER* png_header);
 void png_decode_close(PNG_DECODE_HANDLE* png);

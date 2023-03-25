@@ -15,18 +15,19 @@
 //
 //  initialize PNG decode handle
 //
-void png_decode_init(PNG_DECODE_HANDLE* png) {
+void png_decode_init(PNG_DECODE_HANDLE* png, int16_t half_size) {
 
   png->input_buffer_size = 65536 * 4;
   png->output_buffer_size = 131072 * 4;
 
   png->use_high_memory = 0;
+  png->half_size = half_size;
   png->line_data = NULL;
 
   // actual width and height
-  png->actual_width = 512;
-  png->actual_height = 512;
-  png->pitch = 512;
+//  png->actual_width = 512;
+//  png->actual_height = 512;
+//  png->pitch = 512;
 
   // for PNG decode
   png->current_x = -1;
@@ -132,7 +133,11 @@ void png_decode_set_header(PNG_DECODE_HANDLE* png, PNG_HEADER* png_header) {
 
   // BMP header
   if (png->bmp != NULL) {
-    bmp_encode_write_header(png->bmp, png_header->width, png_header->height);
+    if (png->half_size) {
+      bmp_encode_write_header(png->bmp, png_header->width/2, png_header->height/2);    
+    } else {
+      bmp_encode_write_header(png->bmp, png_header->width, png_header->height);
+    }
   }
 }
 
@@ -160,19 +165,7 @@ static void output_pixel(uint8_t* buffer, size_t buffer_size, int32_t* buffer_co
   int32_t consumed_size = 0;
   int32_t bytes_per_pixel = (png->png_header.color_type == PNG_COLOR_TYPE_RGBA) ? 4 : 3;
   uint8_t* buffer_end = buffer + buffer_size;
-  
-  // cropping check
-  int32_t cy = png->current_y;
-//  if (cy < 0 || cy >= png->actual_height) {
-//    // no need to output any pixels
-//    *buffer_consumed = buffer_size;     // just consumed all
-//    return;
-//  }
-
-  // entry point
-//  volatile uint16_t* gvram_current = GVRAM + png->pitch * cy + 
-//                                    (png->current_x >= 0 ? png->current_x : 0);
-  uint8_t* bitmap_data = png->line_data + (png->current_x >= 0 ? png->current_x * 3 : 0);
+  uint8_t* bitmap_data = png->line_data + (png->current_x < 0 ? 0 : png->half_size ? png->current_x/2 * 3 : png->current_x * 3);
 
   while (buffer < buffer_end) {
 
@@ -180,9 +173,7 @@ static void output_pixel(uint8_t* buffer, size_t buffer_size, int32_t* buffer_co
 
       // get filter mode
       png->current_filter = *buffer++;
-#ifdef DEBUG
-      //printf("g_current_filter=%d,g_current_y=%d\n",g_current_filter,g_current_y);
-#endif
+
       // next pixel
       png->current_x++;
 
@@ -265,12 +256,11 @@ static void output_pixel(uint8_t* buffer, size_t buffer_size, int32_t* buffer_co
       }
 
       // write pixel data in BGR format
-      *bitmap_data++ = bf;
-      *bitmap_data++ = gf;
-      *bitmap_data++ = rf;
-//      if (png->current_x < png->actual_width) {
-//        *gvram_current++ = png->rgb555_r[rf] | png->rgb555_g[gf] | png->rgb555_b[bf] | 1;
-//      }
+      if (!png->half_size || (png->current_x & 0x01) == 0) {
+        *bitmap_data++ = bf;
+        *bitmap_data++ = gf;
+        *bitmap_data++ = rf;
+      }
   
       // cache r,g,b for downstream filtering
       if (png->current_x > 0) {
@@ -292,11 +282,15 @@ static void output_pixel(uint8_t* buffer, size_t buffer_size, int32_t* buffer_co
 
       // next scan line
       if (png->current_x >= png->png_header.width) {
-        bmp_encode_write(png->bmp, png->current_y, png->line_data, png->png_header.width * 3, 1);
+        if (png->half_size) {
+          if ((png->current_y & 0x01) == 0) {
+            bmp_encode_write(png->bmp, png->current_y/2, png->line_data, png->png_header.width/2 * 3, 1);
+          }
+        } else {
+          bmp_encode_write(png->bmp, png->current_y, png->line_data, png->png_header.width * 3, 1);
+        }
         png->current_x = -1;
         png->current_y++;
-//        if (png->current_y >= png->actual_height) break;  // Y cropping
-//        gvram_current = GVRAM + png->pitch * png->current_y;
         bitmap_data = png->line_data;
       }
 

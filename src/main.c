@@ -130,10 +130,10 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
   fo = fopen(out_name, "rb+");
 
   BMP_ENCODE_HANDLE bmp_encode = { 0 };
-  bmp_encode_init(&bmp_encode, fo, half_size);
+  bmp_encode_init(&bmp_encode, fo);
 
   PNG_DECODE_HANDLE png_decode = { 0 };
-  png_decode_init(&png_decode);
+  png_decode_init(&png_decode, half_size);
   png_decode_set_bmp_encoder(&png_decode, &bmp_encode);
 
   printf("converting...");
