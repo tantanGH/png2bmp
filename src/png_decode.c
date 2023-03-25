@@ -297,6 +297,7 @@ static void output_pixel(uint8_t* buffer, size_t buffer_size, int32_t* buffer_co
         png->current_y++;
 //        if (png->current_y >= png->actual_height) break;  // Y cropping
 //        gvram_current = GVRAM + png->pitch * png->current_y;
+        bitmap_data = png->line_data;
       }
 
     }
